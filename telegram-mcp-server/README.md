@@ -34,7 +34,9 @@ TRANSPORT=http PORT=3000 npm start
 
 ### Registering with an MCP client
 
-Example `.mcp.json` entry for stdio:
+This repo already wires it up for Claude Code: [`/.mcp.json`](../.mcp.json) registers the `telegram` server (project-approved via `enabledMcpjsonServers` in [`/.claude/settings.json`](../.claude/settings.json)), pulling `TELEGRAM_BOT_TOKEN` from your shell environment. After `npm install && npm run build` here and exporting `TELEGRAM_BOT_TOKEN` in your shell, Claude Code picks up the `telegram` tools automatically on the next session.
+
+For other MCP clients, or to point at this server from outside the repo, use an entry like:
 
 ```json
 {
