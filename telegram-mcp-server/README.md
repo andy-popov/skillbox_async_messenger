@@ -5,18 +5,21 @@ MCP server exposing the [Telegram Bot API](https://core.telegram.org/bots/api) a
 ## Setup
 
 1. Create a bot via [@BotFather](https://t.me/BotFather) on Telegram and copy its token.
-2. Install dependencies and build:
+2. Set the bot token:
+
+   ```bash
+   export TELEGRAM_BOT_TOKEN="123456:ABC-your-token"
+   ```
+
+3. Install dependencies and build:
 
    ```bash
    npm install
    npm run build
    ```
 
-3. Set the bot token:
-
-   ```bash
-   export TELEGRAM_BOT_TOKEN="123456:ABC-your-token"
-   ```
+   You can skip this step when launching through `bootstrap.sh` (see below) — it
+   installs and builds on demand.
 
 ## Running
 
@@ -34,7 +37,9 @@ TRANSPORT=http PORT=3000 npm start
 
 ### Registering with an MCP client
 
-This repo already wires it up for Claude Code: [`/.mcp.json`](../.mcp.json) registers the `telegram` server (project-approved via `enabledMcpjsonServers` in [`/.claude/settings.json`](../.claude/settings.json)), pulling `TELEGRAM_BOT_TOKEN` from your shell environment. After `npm install && npm run build` here and exporting `TELEGRAM_BOT_TOKEN` in your shell, Claude Code picks up the `telegram` tools automatically on the next session.
+This repo already wires it up for Claude Code: [`/.mcp.json`](../.mcp.json) registers the `telegram` server (project-approved via `enabledMcpjsonServers` in [`/.claude/settings.json`](../.claude/settings.json)), pulling `TELEGRAM_BOT_TOKEN` from your shell environment. Export `TELEGRAM_BOT_TOKEN` in your shell and Claude Code picks up the `telegram` tools automatically on the next session.
+
+It launches via [`bootstrap.sh`](./bootstrap.sh) rather than `node dist/index.js` directly. `dist/` and `node_modules/` are gitignored, so on a fresh clone the direct path exits with `MODULE_NOT_FOUND` and the server shows up as failed-to-connect with no Telegram tools available. `bootstrap.sh` installs dependencies and compiles if `dist/` is missing or stale, then execs the server, so a fresh clone works without a separate build step. Setup output goes to stderr to keep stdout clear for the stdio JSON-RPC channel.
 
 For other MCP clients, or to point at this server from outside the repo, use an entry like:
 
@@ -42,8 +47,8 @@ For other MCP clients, or to point at this server from outside the repo, use an 
 {
   "mcpServers": {
     "telegram": {
-      "command": "node",
-      "args": ["/absolute/path/to/telegram-mcp-server/dist/index.js"],
+      "command": "/absolute/path/to/telegram-mcp-server/bootstrap.sh",
+      "args": [],
       "env": {
         "TELEGRAM_BOT_TOKEN": "123456:ABC-your-token"
       }
