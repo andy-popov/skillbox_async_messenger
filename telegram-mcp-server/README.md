@@ -75,6 +75,54 @@ For other MCP clients, or to point at this server from outside the repo, use an 
 
 Every tool that returns Telegram objects supports `response_format: "markdown" \| "json"` (default `markdown`).
 
+## Troubleshooting
+
+### "The process cannot access the file because it is being used by another process" / port already in use, and a `node` process stays in Task Manager
+
+An earlier instance of the server is still alive and holding the resource the
+new one needs: the HTTP port, the `dist/` files a rebuild wants to overwrite,
+or the bot token's single `getUpdates` slot. Restarting without killing it
+reproduces the same error every time.
+
+Find and stop the leftover process:
+
+```powershell
+# Windows (PowerShell / cmd)
+netstat -ano | findstr :3000      # PID holding the HTTP port
+tasklist | findstr node           # or list every node process
+taskkill /PID <pid> /F
+```
+
+```bash
+# macOS / Linux
+lsof -ti tcp:3000 | xargs kill    # process holding the HTTP port
+pkill -f telegram-mcp-server
+```
+
+Then start again. The server now shuts itself down when its client goes away
+(stdin closes, the parent process exits, or it receives SIGINT/SIGTERM/SIGHUP),
+so orphans should not accumulate; a busy port is reported with an actionable
+message instead of an unhandled `EADDRINUSE` crash.
+
+### "Conflict: terminated by other getUpdates request" (409)
+
+Telegram allows only one poller per bot token. Either a second copy of this
+server is running, or a webhook is configured for the bot. Stop the extra
+process (see above), or delete the webhook, before polling again.
+
+### Claude Code shows the `telegram` server as failed / "connection closed"
+
+`.mcp.json` runs `telegram-mcp-server/dist/index.js`, which is gitignored and
+must be built locally, and the server exits immediately when
+`TELEGRAM_BOT_TOKEN` is unset:
+
+```bash
+cd telegram-mcp-server && npm install   # runs the build via "prepare"
+export TELEGRAM_BOT_TOKEN="123456:ABC-your-token"
+```
+
+Then restart Claude Code so it re-spawns the server.
+
 ## Development
 
 ```bash

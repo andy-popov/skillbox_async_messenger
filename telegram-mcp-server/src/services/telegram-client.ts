@@ -95,6 +95,13 @@ export function formatTelegramError(error: unknown): string {
         return `Error: Forbidden — ${error.message}. The bot may have been blocked by the user, kicked from the chat, or lacks the required admin rights.`;
       case 404:
         return `Error: Not found — ${error.message}. Check that the chat_id or message_id exists.`;
+      case 409:
+        return (
+          `Error: Conflict — ${error.message}. Telegram allows only one getUpdates poller per bot token: ` +
+          "another instance of this server (or another bot process) is still running with the same token. " +
+          "Stop the leftover process (Windows: tasklist | findstr node, then taskkill /PID <pid> /F; " +
+          "macOS/Linux: pkill -f telegram-mcp-server), or delete the webhook if one is set, then retry."
+        );
       case 429: {
         const wait = error.retryAfter ? ` Retry after ${error.retryAfter}s.` : "";
         return `Error: Rate limit exceeded (429).${wait}`;
