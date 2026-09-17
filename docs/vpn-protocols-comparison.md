@@ -299,7 +299,101 @@ Rekey: IKE SA — 4 ч, Child SA — 1 ч, PFS обязателен
 
 ---
 
-## 8. Пост-квантовая готовность
+## 8. Поддержка протоколов клиентами и платформами
+
+### 8.1 Встроенные (нативные) клиенты ОС
+
+🟢 нативно, из коробки · 🟡 только сторонним приложением · 🔴 нет / удалено
+
+| Протокол | Windows 11 | macOS 15/26 | iOS / iPadOS | Android 13+ | Linux | ChromeOS | Роутеры |
+|---|---|---|---|---|---|---|---|
+| PPTP | 🟢 клиент есть (сервер RRAS — deprecated) | 🔴 удалён с 10.12 | 🔴 удалён с iOS 10 | 🔴 удалён в Android 12 | 🟡 pptp-linux | 🔴 | 🟢 MikroTik/Keenetic |
+| L2TP/IPsec | 🟢 | 🟡 есть, deprecated | 🟡 через MDM-профиль | 🔴/🟡 legacy VPN сворачивается | 🟡 xl2tpd+strongSwan | 🔴 удалён | 🟢 |
+| IPsec IKEv2 | 🟢 (+ Always On VPN) | 🟢 | 🟢 лучший нативный вариант | 🟢 с Android 11 | 🟢 XFRM в ядре + strongSwan/libreswan | 🟢 | 🟢 |
+| IPsec IKEv1 | 🟡 только legacy-режимы | 🔴 | 🔴 | 🔴 | 🟢 strongSwan (отключать!) | 🔴 | 🟢 |
+| SSTP | 🟢 родной для MS | 🔴 | 🔴 | 🟡 сторонние | 🟡 sstp-client | 🔴 | 🟢 MikroTik/Keenetic |
+| OpenVPN | 🔴 | 🔴 | 🔴 | 🔴 | 🟡 пакет openvpn + NM-плагин | 🟢 нативно | 🟢 MikroTik/OpenWrt/pfSense |
+| WireGuard | 🔴 нужен клиент | 🔴 нужен клиент | 🔴 нужен клиент | 🔴 нужен клиент | 🟢 в ядре с 5.6 | 🟢 с ChromeOS 110 | 🟢 RouterOS 7 / OpenWrt / Keenetic / OPNsense |
+| AnyConnect / OpenConnect | 🟡 клиент | 🟡 клиент | 🟡 клиент | 🟡 клиент | 🟡 openconnect | 🟡 | 🟡 |
+| GRE / IPIP / VXLAN | 🟡 ограниченно | 🔴 | 🔴 | 🔴 | 🟢 iproute2 | 🔴 | 🟢 |
+| MACsec | 🟡 через драйвер NIC | 🔴 | 🔴 | 🔴 | 🟢 ip macsec + wpa_supplicant | 🔴 | 🟢 коммутаторы |
+| Обход DPI (VLESS/SS/Hysteria) | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 | 🔴 | 🟡 sing-box на OpenWrt |
+
+**Выводы для эксплуатации:**
+- **IKEv2 — единственный протокол с нативной поддержкой на всех четырёх основных платформах.**
+  Если требование «без установки стороннего софта» (например, для подрядчиков или тонких клиентов) — выбор предопределён.
+- **WireGuard требует приложения везде, кроме Linux и ChromeOS.** Для корпоративного парка это означает
+  MDM-развёртывание — не блокер, но статья расходов и точка отказа при обновлениях.
+- Легаси-протоколы **уже удалены вендорами**: PPTP нет ни в одной современной мобильной ОС.
+  Если у вас в инфраструктуре ещё есть PPTP-концентратор, им пользуются только устаревшие устройства — именно те, которые нужно инвентаризовать первыми.
+
+### 8.2 Клиентские приложения
+
+| Клиент | Платформы | Поддерживаемые протоколы | Лицензия | Оценка |
+|---|---|---|---|---|
+| **WireGuard (официальный)** | Win, macOS, iOS, Android, Linux, BSD | WireGuard | GPLv2 / MIT | 🟢 эталон простоты, минимум кода |
+| **OpenVPN Connect** | все | OpenVPN (2.x, 3.x, DCO) | проприетарный (бесплатный) | 🟢 официальный, есть MDM-профили |
+| **OpenVPN GUI / Tunnelblick / openvpn3** | Win / macOS / Linux | OpenVPN | GPL | 🟢 |
+| **strongSwan** | Linux, Android, FreeBSD | IKEv2/IPsec (+ RFC 9370 PQ) | GPLv2 | 🟢 референсная реализация |
+| **Windows Always On VPN** | Windows 10/11 + Server | IKEv2, SSTP (fallback) | в составе ОС | 🟢 device+user tunnel, интеграция с PKI/NPS |
+| **Apple Configurator / MDM-профили** | macOS, iOS | IKEv2, L2TP, любой через NE-плагин | в составе ОС | 🟢 per-app VPN, always-on |
+| **Cisco Secure Client (AnyConnect)** | все | TLS+DTLS, IKEv2/IPsec | проприетарный | 🟢 MFA/posture, но регулярные CVE |
+| **OpenConnect** | Linux, Win, macOS, Android (+GUI) | AnyConnect, GlobalProtect, Pulse, Fortinet, F5, array | LGPL | 🟢 открытая альтернатива вендорским клиентам |
+| **FortiClient** | все | Fortinet SSL-VPN, IPsec | проприетарный | ⚠️ тяжёлый агент, история 0-day |
+| **Ivanti Secure Access** | все | Pulse/Ivanti | проприетарный | ⚠️ то же |
+| **GlobalProtect (Palo Alto)** | все | SSL-VPN, IPsec | проприетарный | 🟡 |
+| **SoftEther VPN Client** | Win, Linux, macOS | SoftEther, OpenVPN, L2TP, SSTP, EtherIP | Apache 2.0 | 🟡 мощный, но большая площадь атаки |
+| **NetworkManager (nm-*-плагины)** | Linux | OpenVPN, WireGuard, IKEv2, L2TP, OpenConnect, SSTP | GPL | 🟢 |
+| **Tailscale / Headscale** | все + NAS, роутеры | WireGuard + DERP-релеи | BSD / AGPL (Headscale) | 🟢 SSO, ACL, MagicDNS |
+| **Netbird / Firezone / Defguard** | все | WireGuard + OIDC | Apache 2.0 / AGPL | 🟢 self-hosted замена Tailscale |
+| **ZeroTier One** | все + роутеры | ZeroTier (L2 overlay) | BSL | 🟡 контрол-плейн у вендора (или свой) |
+| **Nebula** | все | Nebula (Noise) | MIT | 🟢 свой CA, без внешних зависимостей |
+| **AmneziaVPN** | Win, macOS, Linux, iOS, Android | WireGuard, **AmneziaWG**, OpenVPN(+Cloak), IKEv2, Shadowsocks, XRay/REALITY | GPLv3 | 🟢 self-hosted, разворачивает сервер сам |
+| **sing-box** | все (ядро + GUI-обёртки) | VLESS/REALITY, VMess, Trojan, SS, Hysteria2, TUIC, WireGuard, AnyTLS | GPLv3 | 🟢 самое универсальное ядро |
+| **Xray-core** | все | VLESS+XTLS Vision, REALITY, VMess, Trojan, SS | MPL 2.0 | 🟢 |
+| **Hiddify / NekoBox / v2rayNG / v2rayN** | Android, Win, Linux | обёртки над sing-box/Xray | GPL | 🟢 |
+| **Streisand / Shadowrocket / V2Box / Karing** | iOS | VLESS, REALITY, Trojan, SS, Hysteria2, TUIC, WG | проприетарные (App Store) | 🟡 на iOS нет открытого GUI-клиента с полным набором |
+| **Clash Meta / Mihomo + Clash Verge** | все | правила-роутинг поверх SS/VMess/VLESS/Trojan/WG/Hysteria | GPLv3 | 🟢 сильный rule-based routing |
+| **Outline Client** | все | Shadowsocks (AEAD) | Apache 2.0 | 🟡 просто, но нет PFS |
+| **Tor Browser / Orbot** | все | obfs4, meek, Snowflake, WebTunnel | BSD-подобная | 🟢 для анонимности, не для скорости |
+| **Mullvad VPN app** | все | WireGuard (+ PQ-туннели), OpenVPN, Shadowsocks-обфускация, DAITA | GPLv3 | 🟢 один из немногих с постквантовым режимом |
+| **Proton VPN** | все | WireGuard, OpenVPN, IKEv2, Stealth (TLS-обёртка) | GPLv3 (клиенты) | 🟢 |
+| **Windscribe / IVPN / Surfshark** | все | WG, OpenVPN, IKEv2, stunnel/WStunnel | смешанные | 🟡 доверие к оператору |
+
+### 8.3 Сетевое оборудование
+
+| Платформа | PPTP | L2TP/IPsec | IKEv2 | SSTP | OpenVPN | WireGuard | Обфускация |
+|---|---|---|---|---|---|---|---|
+| **MikroTik RouterOS 7** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 (UDP с 7.x) | 🟢 | 🔴 |
+| **OpenWrt** | 🟡 пакет | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | 🟡 sing-box/passwall |
+| **Keenetic** | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🟢 | 🔴 |
+| **pfSense / OPNsense** | 🔴 убран | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | 🟡 плагины |
+| **Cisco IOS / IOS-XE** | 🟢 legacy | 🟢 | 🟢 | 🔴 | 🟡 AnyConnect | 🔴 | 🔴 |
+| **FortiGate** | 🔴 | 🟢 | 🟢 | 🔴 | 🟡 SSL-VPN свой | 🔴 | 🔴 |
+| **Juniper SRX** | 🔴 | 🟢 | 🟢 | 🔴 | 🔴 | 🔴 | 🔴 |
+| **VyOS** | 🟢 | 🟢 | 🟢 | 🟡 | 🟢 | 🟢 | 🔴 |
+| **UniFi / UDM** | 🔴 | 🟢 | 🟢 | 🔴 | 🟢 | 🟢 | 🔴 |
+| **С-Терра Шлюз** | 🔴 | 🟡 | 🟢 ГОСТ | 🔴 | 🔴 | 🔴 | 🔴 |
+
+### 8.4 Замечания по безопасности клиентов
+
+- **iOS/iPadOS:** сторонние VPN работают через `NetworkExtension`. Известная проблема — при подъёме
+  туннеля ранее установленные TCP-соединения не разрываются и продолжают идти вне туннеля.
+  Обходной приём: после подключения включить и выключить авиарежим либо использовать `Always-On VPN` через MDM.
+- **Android:** штатный «Always-on VPN + Block connections without VPN» — единственный надёжный kill-switch.
+  Приложение VPN без этой настройки утечки не закрывает.
+- **Windows:** клиент проверяет отзыв сертификата сервера не всегда; для Always On VPN обязательно
+  задать `RootCertificateNameToAccept`, иначе принимается любой сертификат из доверенного хранилища.
+- **Любой платный VPN-клиент с собственным протоколом** (Catapult Hydra, NordLynx-обвязка, Lightway)
+  — это доверие к вендору. Для корпоративного применения годится только то, чей протокол опубликован
+  и чей клиент можно развернуть на своей инфраструктуре.
+- **Единый агент — единая точка отказа.** FortiClient, Ivanti, GlobalProtect работают с высокими
+  привилегиями на каждой рабочей станции: компрометация агента = компрометация парка.
+  Это аргумент в пользу нативного IKEv2 там, где хватает его функциональности.
+
+---
+
+## 9. Пост-квантовая готовность
 
 | Протокол | Механизм | Зрелость |
 |---|---|---|
@@ -318,7 +412,7 @@ Rekey: IKE SA — 4 ч, Child SA — 1 ч, PFS обязателен
 
 ---
 
-## 9. Что часто называют VPN, но это не VPN
+## 10. Что часто называют VPN, но это не VPN
 
 | Технология | Что это на самом деле | Отличие |
 |---|---|---|
@@ -337,7 +431,7 @@ Rekey: IKE SA — 4 ч, Child SA — 1 ч, PFS обязателен
 
 ---
 
-## 10. Эксплуатационный чек-лист
+## 11. Эксплуатационный чек-лист
 
 **Протокол и криптография**
 - [ ] PPTP, L2TP без IPsec, IKEv1, SSLv3/TLS 1.0/1.1 — отключены полностью.
@@ -372,7 +466,7 @@ Rekey: IKE SA — 4 ч, Child SA — 1 ч, PFS обязателен
 
 ---
 
-## 11. Заключение
+## 12. Заключение
 
 1. **Выбор протокола — решённая задача.** IKEv2/IPsec и WireGuard закрывают 95 % сценариев.
    OpenVPN/OpenConnect остаются как транспорт для враждебных сетей.
