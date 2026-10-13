@@ -7,8 +7,9 @@
     python3 .claude/b24_task.py comment <id> "Что сделано"
     python3 .claude/b24_task.py done <id> "Итог"
 
-Адрес входящего вебхука (права «Задачи») — в переменной B24_TASKS_WEBHOOK,
-например https://<портал>.bitrix24.ru/rest/<user>/<code>/. Ответственный —
+Адрес входящего вебхука с правами на задачи — в B24_TASKS_WEBHOOK, а если её
+нет — в B24_WEBHOOK_URL, основном вебхуке моста greencof-b24-bridge (он задачи
+ставить умеет). Вид: https://<портал>.bitrix24.ru/rest/<user>/<code>/. Ответственный —
 B24_RESPONSIBLE_ID (по умолчанию 71, Андрей Попов). Нет вебхука — скрипт
 говорит об этом и выходит с кодом 2, ничего не ломая.
 """
@@ -26,9 +27,9 @@ DEADLINE_DAYS = 1
 
 
 def _webhook() -> str:
-    url = os.environ.get("B24_TASKS_WEBHOOK", "").strip()
+    url = (os.environ.get("B24_TASKS_WEBHOOK") or os.environ.get("B24_WEBHOOK_URL") or "").strip()
     if not url:
-        sys.exit("B24_TASKS_WEBHOOK не задан — задача в Битриксе не поставлена.")
+        sys.exit("Нет ни B24_TASKS_WEBHOOK, ни B24_WEBHOOK_URL — задача в Битриксе не поставлена.")
     return url.rstrip("/") + "/"
 
 
